@@ -2,7 +2,7 @@ import type OpenAI from 'openai'
 
 import { getDefaultOpenAIClient } from './openai-client'
 
-interface AssistantOptions {
+export interface AssistantOpts {
 	id?: string
 	params?: Partial<OpenAI.Beta.Assistants.AssistantCreateParams>
 	client?: OpenAI
@@ -17,7 +17,7 @@ export class Assistant {
 
 	constructor(
 		public name: string,
-		opts: AssistantOptions = {}
+		opts: AssistantOpts = {}
 	) {
 		this.id = opts.id
 		this.client = opts.client || getDefaultOpenAIClient()

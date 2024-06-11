@@ -1,6 +1,6 @@
-export { Assistant } from "./assistant";
-export { promptWithPick } from "./chains/prompt-with-pick";
-export { promptWithRetry } from "./chains/prompt-with-retry";
-export { createChatCompletionFunction } from "./function";
-export { createOpenAIClient, getDefaultOpenAIClient } from "./openai-client";
-export { Thread } from "./thread";
+export { Assistant, AssistantOpts } from './assistant'
+export { promptWithPick } from './chains/prompt-with-pick'
+export { promptWithRetry } from './chains/prompt-with-retry'
+export { createChatCompletionFunction } from './function'
+export { createOpenAIClient, getDefaultOpenAIClient } from './openai-client'
+export { Thread, ThreadPromptWithFunctionOpts } from './thread'
