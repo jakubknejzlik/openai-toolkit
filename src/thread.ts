@@ -90,10 +90,10 @@ export class Thread {
 		options?: OpenAI.Beta.Threads.Messages.MessageListParams
 	): Promise<OpenAI.Beta.Threads.Messages.Message[]> {
 		const threadId = await this.getId()
-		const messages = await this.client.beta.threads.messages.list(
-			threadId,
-			options
-		)
+		const messages = await this.client.beta.threads.messages.list(threadId, {
+			order: 'asc',
+			...options
+		})
 		return messages.data
 	}
 
