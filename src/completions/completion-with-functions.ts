@@ -1,0 +1,133 @@
+import type { ChatCompletionFunction } from '../function'
+import OpenAI from 'openai'
+import type { z } from 'zod'
+
+import {
+	ChatCompletionMessageParam,
+	ChatCompletionTool
+} from 'openai/resources'
+import zodToJsonSchema from 'zod-to-json-schema'
+import {
+	ChatCompletionCreateParamsBase,
+	ChatCompletionMessage,
+	ChatCompletionMessageToolCall
+} from 'openai/resources/chat/completions'
+
+type CompletionOpts = Partial<
+	Omit<ChatCompletionCreateParamsBase, 'functions' | 'tools'>
+> & {
+	client: OpenAI
+	// options?: Partial<OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming>
+	instructions: string
+	prompt?: string
+	messages?: ChatCompletionMessageParam[]
+}
+
+export type CompletionOptsWithFunctionOpts = CompletionOpts & {
+	functions?: ChatCompletionFunction[]
+	parallelFunctionExecution?: false
+}
+
+export const functionToOpenAIChatCompletionTool = <T extends z.ZodRawShape>(
+	fn: ChatCompletionFunction<T>
+): ChatCompletionTool => {
+	const params = fn.parameters ? zodToJsonSchema(fn.parameters) : undefined
+	return {
+		type: 'function',
+		function: {
+			name: fn.name,
+			description: fn.description,
+			parameters: params
+		}
+	}
+}
+
+export const completionWithFunctions = async (
+	opts: CompletionOptsWithFunctionOpts
+): Promise<ChatCompletionMessage> => {
+	const {
+		client,
+		instructions,
+		prompt,
+		functions,
+		parallelFunctionExecution: parallelToolCalls,
+		messages,
+		model,
+		...rest
+	} = opts
+
+	// initialize messages
+	const _messages: ChatCompletionMessageParam[] = messages ?? [
+		{ role: 'system', content: instructions }
+	]
+	if (prompt) {
+		_messages.push({ role: 'user', content: prompt })
+	}
+
+	const response = await client.chat.completions.create({
+		model: model,
+		messages: _messages,
+		tools: functions?.map(functionToOpenAIChatCompletionTool),
+		...rest,
+		stream: false
+	})
+
+	let message = response?.choices?.[0]?.message
+
+	const handleToolCall = async (toolCall: ChatCompletionMessageToolCall) => {
+		try {
+			const fn = functions?.find((f) => f.name === toolCall.function.name)
+			if (!fn) {
+				throw new Error(
+					`Function ${toolCall.function.name} not found in functions: [${functions?.map((f) => f.name).join(', ')}]`
+				)
+			}
+			const output = await fn.handler(JSON.parse(toolCall.function.arguments))
+			return {
+				tool_call_id: toolCall.id,
+				output
+			}
+		} catch (e) {
+			return {
+				tool_call_id: toolCall.id,
+				output: `Failed with error: ${e}`
+			}
+		}
+	}
+
+	if (message?.tool_calls) {
+		let toolCallResults: {
+			tool_call_id: string
+			output: string
+		}[] = []
+		if (parallelToolCalls === false) {
+			for (const toolCall of message?.tool_calls) {
+				const res = await handleToolCall(toolCall)
+				toolCallResults.push(res)
+			}
+		} else {
+			toolCallResults = await Promise.all(
+				message?.tool_calls.map(handleToolCall)
+			)
+		}
+		_messages.push(message)
+		for (const res of toolCallResults) {
+			_messages.push({
+				tool_call_id: res.tool_call_id,
+				role: 'tool',
+				content: res.output
+			})
+		}
+		return completionWithFunctions({
+			...opts,
+			messages: _messages,
+			prompt: undefined
+		})
+	}
+
+	if (message) {
+		return message
+	} else {
+		throw new Error('Invalid response (empty message)')
+	}
+}
