@@ -7,10 +7,12 @@ import {
 	CompletionOptsWithFunctionOpts,
 	completionWithFunctions
 } from './completion-with-functions'
+import { InferedType } from '../chains/prompt-with-retry'
 
 export type CompletionOptsWithJsonResponse<T extends z.ZodRawShape> =
 	CompletionOptsWithFunctionOpts & {
 		responseObject: z.ZodObject<T>
+		validator?: (obj: z.infer<z.ZodObject<T>>) => Promise<boolean | void>
 	}
 
 export const functionToOpenAIChatCompletionTool = <T extends z.ZodRawShape>(
@@ -27,9 +29,10 @@ export const functionToOpenAIChatCompletionTool = <T extends z.ZodRawShape>(
 	}
 }
 
-export const completionWithJsonResponse = async <T extends z.ZodRawShape>(
-	opts: CompletionOptsWithJsonResponse<T>
-): Promise<z.infer<z.ZodObject<T>>> => {
+export const completionWithJsonResponse = async <T extends z.ZodRawShape>({
+	validator,
+	...opts
+}: CompletionOptsWithJsonResponse<T>): Promise<z.infer<z.ZodObject<T>>> => {
 	const { responseObject, prompt, ...rest } = opts
 	const responseObjectSchema = JSON.stringify(
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -54,6 +57,14 @@ export const completionWithJsonResponse = async <T extends z.ZodRawShape>(
 			parsedContent = parsedContent.properties
 		}
 		const parsed = responseObject.parse(parsedContent)
+
+		if (validator) {
+			const isValid = await validator(parsed)
+			if (isValid === false) {
+				throw new Error('Validation of the response failed. Please try again.')
+			}
+		}
+
 		return parsed
 	} catch (err) {
 		throw new Error(`Failed to parse response: ${err}, json: '${res.content}'`)

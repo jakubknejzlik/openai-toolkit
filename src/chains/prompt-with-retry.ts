@@ -11,6 +11,7 @@ export type PromptWithRetryOpts<T extends ShapeType> = {
 	maxRetries?: number
 	validator?: (obj: InferedType<T>) => Promise<boolean | void>
 } & ThreadPromptWithJsonResponse<T>
+
 export const promptWithRetry = async <T extends ShapeType>({
 	thread,
 	validator,
