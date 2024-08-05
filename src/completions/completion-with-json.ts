@@ -1,13 +1,12 @@
 import type { z } from 'zod'
 import type { ChatCompletionFunction } from '../function'
 
-import { ChatCompletionTool } from 'openai/resources'
 import zodToJsonSchema from 'zod-to-json-schema'
 import {
 	CompletionOptsWithFunctionOpts,
 	completionWithFunctions
 } from './completion-with-functions'
-import { InferedType } from '../chains/prompt-with-retry'
+import OpenAI from 'openai'
 
 export type CompletionOptsWithJsonResponse<T extends z.ZodRawShape> =
 	CompletionOptsWithFunctionOpts & {
@@ -17,7 +16,7 @@ export type CompletionOptsWithJsonResponse<T extends z.ZodRawShape> =
 
 export const functionToOpenAIChatCompletionTool = <T extends z.ZodRawShape>(
 	fn: ChatCompletionFunction<T>
-): ChatCompletionTool => {
+): OpenAI.ChatCompletionTool => {
 	const params = fn.parameters ? zodToJsonSchema(fn.parameters) : undefined
 	return {
 		type: 'function',

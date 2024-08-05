@@ -1,6 +1,5 @@
 import type OpenAI from 'openai'
 import type { AssistantStream } from 'openai/lib/AssistantStream'
-import type { FileObject } from 'openai/resources'
 import pRetry from 'p-retry'
 import type { z } from 'zod'
 import zodToJsonSchema from 'zod-to-json-schema'
@@ -9,8 +8,10 @@ import {
 	type ChatCompletionFunction,
 	functionToOpenAIAssistantTool
 } from './function'
-import { AssistantStreamEvent } from 'openai/resources/beta/assistants'
+// import { AssistantStreamEvent } from 'openai/resources/beta/assistants'
 import { getDefaultOpenAIClient } from './openai-client'
+
+type AssistantStreamEvent = OpenAI.Beta.Assistants.AssistantStreamEvent
 
 interface ThreadOptions {
 	threadId?: string
@@ -330,7 +331,7 @@ export class Thread {
 		}
 	}
 
-	async attachFiles(files: FileObject[]): Promise<void> {
+	async attachFiles(files: OpenAI.FileObject[]): Promise<void> {
 		const thread = await this.getThread()
 		const vector_store_ids =
 			thread.tool_resources?.file_search?.vector_store_ids ?? []

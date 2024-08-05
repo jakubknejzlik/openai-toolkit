@@ -1,26 +1,17 @@
-import type { ChatCompletionFunction } from '../function'
 import OpenAI from 'openai'
 import type { z } from 'zod'
+import type { ChatCompletionFunction } from '../function'
 
-import {
-	ChatCompletionMessageParam,
-	ChatCompletionTool
-} from 'openai/resources'
 import zodToJsonSchema from 'zod-to-json-schema'
-import {
-	ChatCompletionCreateParamsBase,
-	ChatCompletionMessage,
-	ChatCompletionMessageToolCall
-} from 'openai/resources/chat/completions'
 
 type CompletionOpts = Partial<
-	Omit<ChatCompletionCreateParamsBase, 'functions' | 'tools'>
+	Omit<OpenAI.ChatCompletionCreateParams, 'functions' | 'tools'>
 > & {
 	client: OpenAI
 	// options?: Partial<OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming>
 	instructions: string
 	prompt?: string
-	messages?: ChatCompletionMessageParam[]
+	messages?: OpenAI.ChatCompletionMessageParam[]
 }
 
 export type CompletionOptsWithFunctionOpts = CompletionOpts & {
@@ -30,7 +21,7 @@ export type CompletionOptsWithFunctionOpts = CompletionOpts & {
 
 export const functionToOpenAIChatCompletionTool = <T extends z.ZodRawShape>(
 	fn: ChatCompletionFunction<T>
-): ChatCompletionTool => {
+): OpenAI.ChatCompletionTool => {
 	const params = fn.parameters ? zodToJsonSchema(fn.parameters) : undefined
 	return {
 		type: 'function',
@@ -44,7 +35,7 @@ export const functionToOpenAIChatCompletionTool = <T extends z.ZodRawShape>(
 
 export const completionWithFunctions = async (
 	opts: CompletionOptsWithFunctionOpts
-): Promise<ChatCompletionMessage> => {
+): Promise<OpenAI.ChatCompletionMessage> => {
 	const {
 		client,
 		instructions,
@@ -57,7 +48,7 @@ export const completionWithFunctions = async (
 	} = opts
 
 	// initialize messages
-	const _messages: ChatCompletionMessageParam[] = messages ?? [
+	const _messages: OpenAI.ChatCompletionMessageParam[] = messages ?? [
 		{ role: 'system', content: instructions }
 	]
 	if (prompt) {
@@ -65,7 +56,7 @@ export const completionWithFunctions = async (
 	}
 
 	const response = await client.chat.completions.create({
-		model: model,
+		model: model ?? 'gpt-4o-mini',
 		messages: _messages,
 		tools: functions?.map(functionToOpenAIChatCompletionTool),
 		...rest,
@@ -74,7 +65,9 @@ export const completionWithFunctions = async (
 
 	let message = response?.choices?.[0]?.message
 
-	const handleToolCall = async (toolCall: ChatCompletionMessageToolCall) => {
+	const handleToolCall = async (
+		toolCall: OpenAI.ChatCompletionMessageToolCall
+	) => {
 		try {
 			const fn = functions?.find((f) => f.name === toolCall.function.name)
 			if (!fn) {

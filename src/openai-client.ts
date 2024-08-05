@@ -1,13 +1,13 @@
-import OpenAI, { ClientOptions } from 'openai';
+import OpenAI, { ClientOptions } from 'openai'
 
-export const createOpenAIClient = (opts:ClientOptions={}): OpenAI => {
-  return new OpenAI(opts);
-};
+export const createOpenAIClient = (opts: ClientOptions = {}): OpenAI => {
+	return new OpenAI(opts)
+}
 
-let _defaultOpenAIClient: OpenAI = undefined
+let _defaultOpenAIClient: OpenAI | undefined = undefined
 export const getDefaultOpenAIClient = (): OpenAI => {
-  if(!_defaultOpenAIClient) {
-    _defaultOpenAIClient=createOpenAIClient()
-  }
-  return _defaultOpenAIClient
+	if (!_defaultOpenAIClient) {
+		_defaultOpenAIClient = createOpenAIClient()
+	}
+	return _defaultOpenAIClient
 }

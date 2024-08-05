@@ -10,4 +10,4 @@ export { promptWithRetry } from './chains/prompt-with-retry'
 export { createChatCompletionFunction } from './function'
 export { createOpenAIClient, getDefaultOpenAIClient } from './openai-client'
 
-export { Thread, ThreadPromptWithFunctionOpts } from './thread'
+export type { Thread, ThreadPromptWithFunctionOpts } from './thread'

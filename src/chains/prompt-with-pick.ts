@@ -36,9 +36,9 @@ const sortPromptResults = async <T extends ShapeType>(
 		run: {
 			...run,
 			...pickOpts,
-			instructions: `Your task is to help to identify best options for given instructions: ${run.instructions ?? ''}${run.additional_instructions ?? ''} ${pickOpts.instructions ?? ''}${pickOpts.additional_instructions ?? ''} # Generated options:\n${results.map((r, i) => `\n##Option '${optionNames[`${i}`]}':\n===\n${JSON.stringify(r)}\n===`).join('\n')}.`,
+			instructions: `Your task is to help to identify best options for given instructions: ${run.instructions ?? ''}${run.additional_instructions ?? ''} ${pickOpts?.instructions ?? ''}${pickOpts?.additional_instructions ?? ''} # Generated options:\n${results.map((r, i) => `\n##Option '${optionNames[`${i}`]}':\n===\n${JSON.stringify(r)}\n===`).join('\n')}.`,
 			additional_instructions: `Please sort the options in order from best answer to worst.
-			Include all options ['${optionNames.join("','")}']. Example {"pickedItems":["X", "Y", "Z"]}`,
+			Include all options ['${optionNames.join("','")}']. Example {"pickedItems":["X", "Y", "Z"]}`
 		},
 		...rest,
 		responseObject: z.object({ pickedItems: z.array(z.string().length(1)) }),
