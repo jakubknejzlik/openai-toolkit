@@ -1,8 +1,9 @@
 import OpenAI from 'openai'
-import type { z } from 'zod'
+import { z } from 'zod'
 import type { ChatCompletionFunction } from '../function'
 
 import zodToJsonSchema from 'zod-to-json-schema'
+import { zodFunction } from 'openai/helpers/zod'
 
 type CompletionOpts = Partial<
 	Omit<OpenAI.ChatCompletionCreateParams, 'functions' | 'tools'>
@@ -22,15 +23,11 @@ export type CompletionOptsWithFunctionOpts = CompletionOpts & {
 export const functionToOpenAIChatCompletionTool = <T extends z.ZodRawShape>(
 	fn: ChatCompletionFunction<T>
 ): OpenAI.ChatCompletionTool => {
-	const params = fn.parameters ? zodToJsonSchema(fn.parameters) : undefined
-	return {
-		type: 'function',
-		function: {
-			name: fn.name,
-			description: fn.description,
-			parameters: params
-		}
-	}
+	return zodFunction({
+		name: fn.name,
+		description: fn.description,
+		parameters: fn.parameters
+	})
 }
 
 export const completionWithFunctions = async (
@@ -55,13 +52,14 @@ export const completionWithFunctions = async (
 		_messages.push({ role: 'user', content: prompt })
 	}
 
-	const response = await client.chat.completions.create({
+	const response = await client.beta.chat.completions.parse({
 		model: model ?? 'gpt-4o-mini',
 		messages: _messages,
 		tools: functions?.map(functionToOpenAIChatCompletionTool),
 		...rest,
 		stream: false
 	})
+	console.log('???', JSON.stringify(response, null, 2))
 
 	let message = response?.choices?.[0]?.message
 
@@ -88,7 +86,7 @@ export const completionWithFunctions = async (
 		}
 	}
 
-	if (message?.tool_calls) {
+	if (message?.tool_calls && message?.tool_calls.length > 0) {
 		let toolCallResults: {
 			tool_call_id: string
 			output: string

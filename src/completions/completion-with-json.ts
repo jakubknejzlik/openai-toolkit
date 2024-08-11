@@ -1,5 +1,6 @@
 import type { z } from 'zod'
 import type { ChatCompletionFunction } from '../function'
+import { zodFunction, zodResponseFormat } from 'openai/helpers/zod'
 
 import zodToJsonSchema from 'zod-to-json-schema'
 import {
@@ -17,15 +18,11 @@ export type CompletionOptsWithJsonResponse<T extends z.ZodRawShape> =
 export const functionToOpenAIChatCompletionTool = <T extends z.ZodRawShape>(
 	fn: ChatCompletionFunction<T>
 ): OpenAI.ChatCompletionTool => {
-	const params = fn.parameters ? zodToJsonSchema(fn.parameters) : undefined
-	return {
-		type: 'function',
-		function: {
-			name: fn.name,
-			description: fn.description,
-			parameters: params
-		}
-	}
+	return zodFunction({
+		name: fn.name,
+		description: fn.description,
+		parameters: fn.parameters
+	})
 }
 
 type Response<T extends z.ZodRawShape> = {
@@ -46,7 +43,7 @@ export const completionWithJsonResponse = async <T extends z.ZodRawShape>({
 	const _prompt = `JSON schema:\n${responseObjectSchema}\n\n${prompt ? `${prompt}\n\n` : ''}\nYou MUST answer with a JSON object that matches the JSON schema above.`
 	const res = await completionWithFunctions({
 		...rest,
-		response_format: { type: 'json_object' },
+		response_format: zodResponseFormat(responseObject, 'event'),
 		prompt: _prompt
 	})
 
