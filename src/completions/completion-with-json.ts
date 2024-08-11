@@ -28,17 +28,22 @@ export const functionToOpenAIChatCompletionTool = <T extends z.ZodRawShape>(
 	}
 }
 
+type Response<T extends z.ZodRawShape> = {
+	object: z.infer<z.ZodObject<T>>
+	rawResponse: OpenAI.Chat.Completions.ChatCompletionMessage
+}
+
 export const completionWithJsonResponse = async <T extends z.ZodRawShape>({
 	validator,
 	...opts
-}: CompletionOptsWithJsonResponse<T>): Promise<z.infer<z.ZodObject<T>>> => {
+}: CompletionOptsWithJsonResponse<T>): Promise<Response<T>> => {
 	const { responseObject, prompt, ...rest } = opts
 	const responseObjectSchema = JSON.stringify(
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		zodToJsonSchema(responseObject)
 	)
 
-	const _prompt = `Output JSON must be single object (only one JSON object) conforming to the following JsonSchema7:\n${responseObjectSchema}\n\n${prompt ? `${prompt}\n\n` : ''}\n`
+	const _prompt = `JSON schema:\n${responseObjectSchema}\n\n${prompt ? `${prompt}\n\n` : ''}\nYou MUST answer with a JSON object that matches the JSON schema above.`
 	const res = await completionWithFunctions({
 		...rest,
 		response_format: { type: 'json_object' },
@@ -55,16 +60,16 @@ export const completionWithJsonResponse = async <T extends z.ZodRawShape>({
 		if (parsedContent.$schema && parsedContent.properties) {
 			parsedContent = parsedContent.properties
 		}
-		const parsed = responseObject.parse(parsedContent)
+		const object = responseObject.parse(parsedContent)
 
 		if (validator) {
-			const isValid = await validator(parsed)
+			const isValid = await validator(object)
 			if (isValid === false) {
 				throw new Error('Validation of the response failed. Please try again.')
 			}
 		}
 
-		return parsed
+		return { object, rawResponse: res }
 	} catch (err) {
 		throw new Error(`Failed to parse response: ${err}, json: '${res.content}'`)
 	}
@@ -75,7 +80,7 @@ export const completionWithJsonResponseWithRetry = async <
 >(
 	props: CompletionOptsWithJsonResponse<T>,
 	retryCount = 2
-): Promise<z.infer<z.ZodObject<T>>> => {
+): Promise<Response<T>> => {
 	let latestErr: Error | undefined
 	try {
 		return await completionWithJsonResponse(props)
