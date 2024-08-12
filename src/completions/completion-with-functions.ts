@@ -56,10 +56,10 @@ export const completionWithFunctions = async (
 		model: model ?? 'gpt-4o-mini',
 		messages: _messages,
 		tools: functions?.map(functionToOpenAIChatCompletionTool),
+		parallel_tool_calls: parallelToolCalls,
 		...rest,
 		stream: false
 	})
-	console.log('???', JSON.stringify(response, null, 2))
 
 	let message = response?.choices?.[0]?.message
 
