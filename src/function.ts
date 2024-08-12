@@ -9,14 +9,14 @@ import { zodToJsonSchema } from 'zod-to-json-schema'
 export type ChatCompletionFunction<T extends z.ZodRawShape = any> = {
 	name: string
 	description?: string
-	parameters?: z.ZodObject<T>
+	parameters: z.ZodObject<T>
 	handler: (params: T) => Promise<string>
 }
 
 interface createChatCompletionFunctionOpts<P extends z.ZodRawShape> {
 	name: string
 	description?: string
-	parameters?: z.ZodObject<P>
+	parameters: z.ZodObject<P>
 	handler: (params: z.infer<z.ZodObject<P>>) => Promise<string>
 }
 

@@ -2,7 +2,6 @@ import OpenAI from 'openai'
 import { z } from 'zod'
 import type { ChatCompletionFunction } from '../function'
 
-import zodToJsonSchema from 'zod-to-json-schema'
 import { zodFunction } from 'openai/helpers/zod'
 
 type CompletionOpts = Partial<
